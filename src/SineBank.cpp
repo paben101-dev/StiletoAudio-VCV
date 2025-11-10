@@ -1,9 +1,16 @@
 #include "plugin.hpp"
 #include <random>
 
+// TODO: 
+// 1. Implement two sliders, one the upper frequency range for this bank, 
+// and the other a lower frequency range for this bank.
+// 2. Add a CV gate input to retrigger the button to change all the frequencies
+
 struct SineBank : Module {
 	enum ParamId {
 		RANDOMFREQUENCYBUTTON_PARAM,
+		SLIDERLOW_PARAM,
+		SLIDERHIGH_PARAM,
 		PARAMS_LEN
 	};
 	enum InputId {
@@ -30,16 +37,44 @@ struct SineBank : Module {
 
     std::random_device rd;
     std::mt19937 gen;
-    std::uniform_real_distribution<float> dist{0.f, 10000.f};
-    float randomFreq = 0.f;
+    std::uniform_real_distribution<float> dist{100.f, 10000.f};
+    // float randomFreq = 0.f;
 
 	// Button trigger
     dsp::SchmittTrigger randomButtonTrigger;
 
+	// Sine Oscillator
+    struct SineOsc {
+
+        float phase = 0.f;
+        float freq = 0.f;
+
+		float process(const ProcessArgs& args) {
+            phase += freq * args.sampleTime;
+            if (phase >= 1.f)
+                phase -= 1.f;
+            return std::sin(2.f * M_PI * phase);
+        }
+
+		void setFrequency(float f) {
+			freq = f;
+		}
+
+    };
+
+	// the bank of oscillators
+	std::vector<SineOsc> oscillators;
+
 	SineBank() {
 
 		gen.seed(rd()); // create random distribution
-        randomFreq = dist(gen); // random frequency call setup
+
+		// oscillators init
+		oscillators.resize(12);
+
+		for (auto& osc : oscillators) {
+			osc.setFrequency(dist(gen));
+		}
 		
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
 		configParam(RANDOMFREQUENCYBUTTON_PARAM, 0.f, 1.f, 0.f, "");
@@ -57,31 +92,18 @@ struct SineBank : Module {
 		configOutput(SINEOUTPUT12_OUTPUT, "");
 	}
 
-    // Sine Oscillator
-    struct SineOsc {
-
-        float phase = 0.f;
-        
-		float process(float freq, const ProcessArgs& args) {
-            phase += freq * args.sampleTime;
-            if (phase >= 1.f)
-                phase -= 1.f;
-            return std::sin(2.f * M_PI * phase);
-        }
-
-    };
-
-	// each output gets its own oscillator
-    SineOsc osc1;
-
     void process(const ProcessArgs& args) override {
 
-        float sine = osc1.process(randomFreq, args);
-        outputs[SINEOUTPUT1_OUTPUT].setVoltage(5.f * sine);
+		for (int i = 0; i < OUTPUTS_LEN; ++i) {
+			outputs[i].setVoltage(5.f * oscillators[i].process(args));
+		}
 
 		// Detect a button press
         if (randomButtonTrigger.process(params[RANDOMFREQUENCYBUTTON_PARAM].getValue())) {
-            randomFreq = dist(gen);  // pick new random frequency once per press
+            for (auto& osc : oscillators) {
+				float freq = dist(gen);
+				osc.setFrequency(freq);
+			}
         }
 
     }
@@ -93,6 +115,9 @@ struct SineBankWidget : ModuleWidget {
 		setPanel(createPanel(asset::plugin(pluginInstance, "res/SineBank.svg"))); 
 
 		addParam(createParamCentered<LEDButton>(mm2px(Vec(33.373, 15.099)), module, SineBank::RANDOMFREQUENCYBUTTON_PARAM));
+
+		// addParam(createParamCentered<LEDSlider>(mm2px(Vec(100, 10)), module, SineBank::SLIDERLOW_PARAM));
+		// addParam(createParamCentered<LEDSlider>(mm2px(Vec(100, 10)), module, SineBank::SLIDERHIGH_PARAM));
 
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(6.675, 15.506)), module, SineBank::SINEOUTPUT1_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 24.501)), module, SineBank::SINEOUTPUT2_OUTPUT));
