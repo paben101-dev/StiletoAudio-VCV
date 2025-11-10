@@ -2,8 +2,8 @@
 #include <random>
 
 // TODO: 
-// 1. make sliders default to current UI position at startup, or save state system
-// 2. label controls, etc. on the panel
+// 1. label controls, etc. on the panel
+// 2. create a nice panel artwork
 
 struct SineBank : Module {
 	enum ParamId {
@@ -35,14 +35,27 @@ struct SineBank : Module {
 		LIGHTS_LEN
 	};
 
+
+    void onReset() override {
+        initializeOscillators();
+    }
+
+	bool loadedFromPatch = false;	
+	void dataFromJson(json_t* rootJ) override {
+		loadedFromPatch = true;
+	}
+
+
     std::random_device rd;
     std::mt19937 gen;
     std::uniform_real_distribution<float> dist{100.f, 10000.f};
+
 
 	// Button trigger
     dsp::SchmittTrigger randomButtonTrigger;
 	// Gate Trigger
 	dsp::SchmittTrigger gateTrigger;
+
 
 	// Sine Oscillator
     struct SineOsc {
@@ -65,6 +78,25 @@ struct SineBank : Module {
 	// the bank of oscillators
 	std::vector<SineOsc> oscillators;
 
+
+	// this converts the faders from linear to log
+	struct LogFrequencyParamQuantity : rack::engine::ParamQuantity {
+		float getDisplayValue() override {
+			// Convert the internal normalized 0–1 "value" to a log-domain frequency
+			return std::pow(10.f, ParamQuantity::getValue());
+		}
+
+		void setDisplayValue(float displayValue) override {
+			// Inverse of above: take a user frequency (like 440 Hz) and log it
+			ParamQuantity::setValue(std::log10(displayValue));
+		}
+
+		std::string getDisplayValueString() override {
+			return rack::string::f("%.2f Hz", getDisplayValue());
+		}
+};
+
+
 	SineBank() {
 
 		gen.seed(rd()); // create random distribution
@@ -80,28 +112,35 @@ struct SineBank : Module {
 
 		configParam(RANDOMFREQUENCYBUTTON_PARAM, 0.f, 1.f, 0.f, "Randomize all frequencies (Hz)");
 
-		configParam(SLIDER1_PARAM, 20.f, 10000.f, 100.f, "Frequency bound 1 (Hz)");
-		configParam(SLIDER2_PARAM, 20.f, 10000.f, 5000.f, "Frequency bound 2 (Hz)");
+		configParam<LogFrequencyParamQuantity>(
+			SLIDER1_PARAM,
+			std::log10(20.f),     // min (log10 of 20)
+			std::log10(10000.f),  // max (log10 of 10,000)
+			std::log10(440.f),    // default (log10 of 440)
+			"Frequency bound 1 (Hz)"
+		);
+
+		configParam<LogFrequencyParamQuantity>(
+			SLIDER2_PARAM,
+			std::log10(20.f),     
+			std::log10(10000.f),  
+			std::log10(440.f),    
+			"Frequency bound 2 (Hz)"
+		);
 
 		configInput(GATE_INPUT, "Gate");
 
-		configOutput(SINEOUTPUT1_OUTPUT, "");
-		configOutput(SINEOUTPUT2_OUTPUT, "");
-		configOutput(SINEOUTPUT3_OUTPUT, "");
-		configOutput(SINEOUTPUT4_OUTPUT, "");
-		configOutput(SINEOUTPUT5_OUTPUT, "");
-		configOutput(SINEOUTPUT6_OUTPUT, "");
-		configOutput(SINEOUTPUT7_OUTPUT, "");
-		configOutput(SINEOUTPUT8_OUTPUT, "");
-		configOutput(SINEOUTPUT9_OUTPUT, "");
-		configOutput(SINEOUTPUT10_OUTPUT, "");
-		configOutput(SINEOUTPUT11_OUTPUT, "");
-		configOutput(SINEOUTPUT12_OUTPUT, "");
+		for (int i = 0; i < OUTPUTS_LEN; ++i) {
+			configOutput(i, "Sine output");
+		}
+
 	}
 
 	void randomizeFrequncies() {
-		float slider1 = params[SLIDER1_PARAM].getValue();
-		float slider2 = params[SLIDER2_PARAM].getValue();
+		// we are converting from log back to linear here
+		// since the sliders are log
+		float slider1 = std::pow(10.f, params[SLIDER1_PARAM].getValue());
+		float slider2 = std::pow(10.f, params[SLIDER2_PARAM].getValue());
 
 		// Ensure bounds make sense
 		if (slider1 > slider2)
@@ -113,7 +152,20 @@ struct SineBank : Module {
 			osc.setFrequency(dist(gen));
 	}
 
+	void initializeOscillators() {
+		oscillators.clear();
+		oscillators.resize(12);
+		randomizeFrequncies();
+	}
+
     void process(const ProcessArgs& args) override {
+
+        static bool initialized = false;
+        if (!initialized) {
+            if (!loadedFromPatch) 
+				initializeOscillators();
+            initialized = true;
+        }
 
 		for (int i = 0; i < OUTPUTS_LEN; ++i) {
 			outputs[i].setVoltage(5.f * oscillators[i].process(args));
@@ -139,25 +191,25 @@ struct SineBankWidget : ModuleWidget {
 		setModule(module);
 		setPanel(createPanel(asset::plugin(pluginInstance, "res/SineBank.svg"))); 
 
-		addParam(createParamCentered<LEDButton>(mm2px(Vec(33.373, 15.099)), module, SineBank::RANDOMFREQUENCYBUTTON_PARAM));
+		addParam(createParamCentered<LEDButton>(mm2px(Vec(33.373, 12.099)), module, SineBank::RANDOMFREQUENCYBUTTON_PARAM));
 
 		addParam(createParamCentered<LEDSlider>(mm2px(Vec(5.819, 102)), module, SineBank::SLIDER1_PARAM));
 		addParam(createParamCentered<LEDSlider>(mm2px(Vec(11.640, 102)), module, SineBank::SLIDER2_PARAM));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(33.5, 25)), module, SineBank::GATE_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(33.5, 22)), module, SineBank::GATE_INPUT));
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(6.675, 15.506)), module, SineBank::SINEOUTPUT1_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 24.501)), module, SineBank::SINEOUTPUT2_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 33.497)), module, SineBank::SINEOUTPUT3_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 42.493)), module, SineBank::SINEOUTPUT4_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 52.987)), module, SineBank::SINEOUTPUT5_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 61.983)), module, SineBank::SINEOUTPUT6_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 70.978)), module, SineBank::SINEOUTPUT7_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 79.974)), module, SineBank::SINEOUTPUT8_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 91.828)), module, SineBank::SINEOUTPUT9_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 100.824)), module, SineBank::SINEOUTPUT10_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 109.819)), module, SineBank::SINEOUTPUT11_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 118.815)), module, SineBank::SINEOUTPUT12_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(6.675, 12.506)), module, SineBank::SINEOUTPUT1_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 21.501)), module, SineBank::SINEOUTPUT2_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 30.497)), module, SineBank::SINEOUTPUT3_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.01, 39.493)), module, SineBank::SINEOUTPUT4_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 49.987)), module, SineBank::SINEOUTPUT5_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 58.983)), module, SineBank::SINEOUTPUT6_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 67.978)), module, SineBank::SINEOUTPUT7_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(20.132, 76.974)), module, SineBank::SINEOUTPUT8_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 88.828)), module, SineBank::SINEOUTPUT9_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 97.824)), module, SineBank::SINEOUTPUT10_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 106.819)), module, SineBank::SINEOUTPUT11_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(33.373, 115.815)), module, SineBank::SINEOUTPUT12_OUTPUT));
 	}
 };
 
