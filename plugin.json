@@ -16,7 +16,13 @@
     {
       "slug": "SineBank",
       "name": "SineBank",
-      "description": "A sine bank with 12 oscillators and random frequencies, shuffles randomly via button presses",
+      "description": "A sine bank with 12 oscillators and random frequencies, shuffles randomly via button presses or gate",
+      "tags": []
+    },
+    {
+      "slug": "VCABank",
+      "name": "VCABank",
+      "description": "",
       "tags": []
     }
   ]

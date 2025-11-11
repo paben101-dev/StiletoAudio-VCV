@@ -4,6 +4,8 @@
 // TODO: 
 // 1. label controls, etc. on the panel
 // 2. create a nice panel artwork
+// 3. maybe a 1v/oct input that shifts both faders at once
+// 4. maybe a mini quantizer
 
 struct SineBank : Module {
 	enum ParamId {
