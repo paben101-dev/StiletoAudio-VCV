@@ -1,5 +1,8 @@
 #include "plugin.hpp"
 
+// TODO:
+// 1. VCAs need linear and log scaling with UI switch, start with expo tho
+// 2. Add all UI elements
 
 struct VCABank : Module {
 	enum ParamId {
