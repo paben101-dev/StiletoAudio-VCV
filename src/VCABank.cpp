@@ -1,10 +1,8 @@
 #include "plugin.hpp"
 
 // TODO:
-// 1. VCAs need linear and log scaling with UI switch, start with expo tho
-// 2. Add all UI elements
-// 3. smaller middle knob, maybe expand size for more controls
-// 4. envelope generator that randomly moves all knobs over time with time definer (10ms to 3secs)
+// 1. maybe expand size horizontally for more controls
+// 2. CV inputs for attenuator control
 
 struct VCABank : Module {
 	enum ParamId {
@@ -18,6 +16,9 @@ struct VCABank : Module {
 		GAIN_8,
 		GAIN_9,
 		GAIN_10,
+
+		RAMP_SWITCH,
+
 		PARAMS_LEN
 	};
 	enum InputId {
@@ -31,6 +32,7 @@ struct VCABank : Module {
 		INPUT_8,
 		INPUT_9,
 		INPUT_10,
+
 		INPUTS_LEN
 	};
 	enum OutputId {
@@ -44,6 +46,7 @@ struct VCABank : Module {
 		OUTPUT_8,
 		OUTPUT_9,
 		OUTPUT_10,
+
 		OUTPUTS_LEN
 	};
 	enum LightId {
@@ -52,31 +55,33 @@ struct VCABank : Module {
 
 	VCABank() {
 
-		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-		
-		// collapse this in a readable way
-		for (auto i = 0; i < PARAMS_LEN; ++i) {
-			configParam(i, 0.f, 1.f, 0.5, "Attenuator");
-		}
-		for (auto i = 0; i < INPUTS_LEN; ++i) {
-			configParam(i, 0.f, 1.f, 0.5, "Input");
-		}
-		for (auto i = 0; i < OUTPUTS_LEN; ++i) {
-			configParam(i, 0.f, 1.f, 0.5, "Output");
-		}
+			config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
+			
+			for (auto i = 0; i < OUTPUTS_LEN; ++i) {
+				configParam(i, 0.f, 1.f, 0.5, "Input");
+				configParam(i, 0.f, 1.f, 0.5, "Attenuator");
+				configParam(i, 0.f, 1.f, 0.5, "Output");
+			}
 
-	}
+			configSwitch(VCABank::RAMP_SWITCH, 0.f, 1.f, 0.f, "Response", {"Linear", "Exponential"});
+
+		}
 
 	void process(const ProcessArgs& args) override {
 
+		bool expo = params[RAMP_SWITCH].getValue() > 0.5f;
 		for (int i = 0; i < OUTPUTS_LEN; ++i) {
-			// Linear only so far
 			float in = inputs[i].getVoltage();
 			float gain = params[i].getValue();
-			outputs[i].setVoltage(in * gain);
-		}
 
+			if (expo)
+				gain = std::pow(gain, 2.0f);  // exponential response
+
+			outputs[i].setVoltage(in * gain);
+		
+		}
 	}
+
 };
 
 
@@ -86,6 +91,7 @@ struct VCABankWidget : ModuleWidget {
 		setModule(module);
 		setPanel(createPanel(asset::plugin(pluginInstance, "res/VCABank.svg")));
 
+		addParam(createParamCentered<CKSS>(mm2px(Vec(33.373, 10.099)), module, VCABank::RAMP_SWITCH));
 
 		// offset rows by 10mm
 		addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(20, 21.38471)), module, VCABank::GAIN_1));
