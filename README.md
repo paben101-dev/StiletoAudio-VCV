@@ -17,7 +17,7 @@ may be derived.
 A very simple bank of 10 VCAs; Linear ramp.
 - Planning to implement user option to switch from linear to log; random envelope generator per VCA attenuator;
 <p align="left">
-  <img src="res/SineBank_SC.png" width="250" />
+  <img src="res/VCABank_SC.png" width="250" />
 </p
 
 # Roadmap
