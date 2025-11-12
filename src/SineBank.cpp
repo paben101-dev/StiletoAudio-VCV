@@ -139,6 +139,7 @@ struct SineBank : Module {
 	}
 
 	void randomizeFrequncies() {
+		
 		// we are converting from log back to linear here
 		// since the sliders are log
 		float slider1 = std::pow(10.f, params[SLIDER1_PARAM].getValue());

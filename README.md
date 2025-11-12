@@ -13,6 +13,13 @@ may be derived.
   <img src="res/SineBank_SC.png" width="250" />
 </p>
 
+### VCABank
+A very simple bank of 10 VCAs; Linear ramp.
+- Planning to implement user option to switch from linear to log; random envelope generator per VCA attenuator;
+<p align="left">
+  <img src="res/SineBank_SC.png" width="250" />
+</p
+
 # Roadmap
 - WavetableBank: Same concept as SineBank, but with wavetable oscillators
 - VCABank: A simple bank of twelve VCAs with linear and exponential implementation
