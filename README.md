@@ -15,12 +15,19 @@ may be derived.
 
 ### VCABank
 A very simple bank of 10 VCAs; Linear ramp.
-- Planning to implement user option to switch from linear to log; random envelope generator per VCA attenuator;
 <p align="left">
   <img src="res/VCABank_SC.png" width="250" />
-</p
+</p>
 
-# Roadmap
+### Salvador
+Clock generator with 10 outputs; each output's clock rate is determined by prime number series and slight random variance;
+<p align="left">
+<img src="res/Salvador_SC.png" width="250" /> 
+</p>
+
+***
+
+## Roadmap
 - WavetableBank: Same concept as SineBank, but with wavetable oscillators
 - VCABank: A simple bank of twelve VCAs with linear and exponential implementation
 - Salvador: Clock generator with 12 sources; scaled but with some randomness

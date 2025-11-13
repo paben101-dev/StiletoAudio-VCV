@@ -24,6 +24,12 @@
       "name": "VCABank",
       "description": "",
       "tags": []
+    },
+    {
+      "slug": "Salvador",
+      "name": "Salvador",
+      "description": "",
+      "tags": []
     }
   ]
 }

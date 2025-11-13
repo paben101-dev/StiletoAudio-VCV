@@ -3,6 +3,7 @@
 // TODO:
 // 1. maybe expand size horizontally for more controls
 // 2. CV inputs for attenuator control
+// 3. Add name to bottom of panel
 
 struct VCABank : Module {
 	enum ParamId {
@@ -127,12 +128,6 @@ struct VCABankWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(32.972713, 99.797209)), module, VCABank::OUTPUT_9));
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(32.972713, 109.797209)), module, VCABank::OUTPUT_10));
 
-
-
-		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 	}
 };
 
